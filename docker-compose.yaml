@@ -1,0 +1,27 @@
+version: '3.3'
+services:
+  tododb:
+    container_name: tododb
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: 'todo'
+      MYSQL_USER: 'user'
+      MYSQL_PASSWORD: 'password'
+      MYSQL_ROOT_PASSWORD: '1qwerty2'
+    volumes:
+      - ./db/mysql-data:/var/lib/mysql
+    ports:
+      - "3418:3306"
+
+  flyway:
+    image: flyway/flyway:latest
+    environment:
+      - FLYWAY_USER=user
+      - FLYWAY_PASSWORD=password
+      - FLYWAY_URL=jdbc:mysql://tododb:3306/todo?allowPublicKeyRetrieval=true&useSSL=false
+      - FLYWAY_GROUP=true
+    command: -locations=filesystem:/flyway/sql -connectRetries=5 migrate
+    volumes:
+      - ${PWD}/src/main/resources/db/migration:/flyway/sql
+    depends_on:
+      - tododb
