@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Todo Application</title>
+    <script src=https://code.jquery.com/jquery-3.6.0.min.js></script>
+    <link href="/css/main.css" rel="stylesheet">
+</head>
+<body>
+<h1>ToDo Application</h1>
+
+<table id="data-table" class="main-table">
+    <thead>
+    <tr>
+        <th>#</th>
+        <th>Description</th>
+        <th>Status</th>
+        <th>Edit</th>
+        <th>Delete</th>
+    </tr>
+    </thead>
+    <tbody>
+
+    </tbody>
+</table>
+<div id="paginator-container">
+    <div class="paginator-label">Page:</div>
+    <div id="pages"></div>
+</div>
+
+<br/>
+<hr>
+<h2>Create new Task:</h2>
+<form id="create-task">
+    <div>
+        <label for="description">Description:</label>
+        <input type="text" id="description" name="description">
+    </div>
+    <div>
+        <label for="status">Status:</label>
+        <span id="input-status">
+            <select id="status" name="status">
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="DONE">Done</option>
+                <option value="PAUSED">Paused</option>
+            </select>
+        </span>
+    </div>
+    <div>
+        <button type="submit">Save</button>
+    </div>
+</form>
+
+<script>
+    let totalTaskCount = 0;
+    let totalPages = 1;
+    let currentPage = 1;
+    const taskPerPage = 10;
+
+    $(document).ready(function () {
+        getAllTasksCount();
+        getAllTasks(currentPage);
+
+        $("#paginator-container").on('click', '.pages-button', (function (e) {
+            let $this = $(this);
+            currentPage = $this.data('page')
+            getAllTasks(currentPage)
+            highlightSelectedPage()
+            e.preventDefault();
+        }));
+
+        // Delete row button handler
+        $("#data-table").on('click', '.delete-row-button', (function (e) {
+            if (confirm("Do you want to delete task?")) {
+                deleteTask($(this).closest('tr').data('id'));
+            }
+            e.preventDefault();
+        }));
+
+        // Edit row button handler
+        $("#data-table").on('click', '.edit-row-button', (function (e) {
+            let parentRow = $(this).closest('tr');
+            parentRow.find('.delete-row-button').hide();
+            parentRow.find('.edit-row-button').hide().parent().append(
+                '<a class="save-row-button" href="#"><img src="/img/save.svg" width="15px" alt="Save"/></a>'
+            );
+
+            const currentDescription = parentRow.find('.task-description').html();
+            parentRow.find('.task-description').empty().append('<input type="text" value="' + currentDescription + '"/>');
+
+            const taskStatus = parentRow.find('.task-status').html();
+            parentRow.find('.task-status').empty().append('<input type="text" value="' + taskStatus + '"/>');
+
+            e.preventDefault();
+        }));
+
+        // Save button
+        $("#data-table").on('click', '.save-row-button', (function (e) {
+            let parentRow = $(this).closest('tr');
+            const taskId = parentRow.data('id');
+
+            $.ajax({
+                type: "PUT",
+                url: "/todo",
+
+                data: JSON.stringify(
+                    {
+                        id: taskId,
+                        description: parentRow.find('.task-description input').val(),
+                        status: parentRow.find('.task-status input').val(),
+                    }
+                ),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    getAllTasks(currentPage)
+                    highlightSelectedPage();
+                }
+            });
+
+            e.preventDefault();
+        }));
+
+        $("#create-task").submit(function (event) {
+            $.ajax({
+                type: "POST",
+                url: "/todo",
+                dataType: "json",
+                contentType: "application/json;charset=utf-8",
+                async: false,
+                data: JSON.stringify({
+                    "description": $("#description").val(),
+                    "status": $("#status").val()
+                })
+            }).done(function (data) {
+                $("#create-task").trigger('reset');
+
+                getAllTasks(currentPage)
+                highlightSelectedPage();
+            });
+
+            event.preventDefault();
+        });
+    });
+
+    function getAllTasksCount() {
+        $.ajax({
+            type: 'GET',
+            url: '/todo/count',
+            dataType: "json",
+            success: function (data) {
+                totalTaskCount = parseInt(data.count);
+
+                renderPaginator();
+                highlightSelectedPage();
+            }
+        });
+    }
+
+    function renderPaginator() {
+        totalPages = Math.ceil(totalTaskCount / taskPerPage);
+
+        const paginatorContainer = $('#pages');
+        paginatorContainer.empty();
+        for (let i = 1; i <= totalPages; i++) {
+            paginatorContainer.append("<button class='pages-button' data-page='" + i + "'>" + i + "</button>");
+        }
+    }
+
+    function highlightSelectedPage() {
+        $("button").filter(function () {
+            if ($(this).data('page') == currentPage) {
+                $(this).css('color', 'red');
+            } else {
+                $(this).css('color', 'black');
+            }
+        });
+    }
+
+    function getAllTasks(pageNumber = 1) {
+        $.ajax({
+            type: 'GET',
+            url: '/todo?page=' + pageNumber,
+            dataType: "json",
+            success: function (data) {
+                let tableBody = $('#data-table tbody');
+                tableBody.empty();
+
+                for (let i = 0; i < data.length; i++) {
+                    tableBody.append(
+                        '<tr data-id="' + data[i].id + '" >' +
+                        '<td class="task-id">' + data[i].id + '</td>' +
+                        '<td class="task-description">' + data[i].description + '</td>' +
+                        '<td class="task-status">' + data[i].status + '</td>' +
+                        '<td><a class="edit-row-button" href="#"><img src="/img/edit.svg" width="15px" alt="Edit"/></a></td>' +
+                        '<td><a class="delete-row-button" href="#"><img src="/img/delete.svg" width="15px" alt="Delete"/></a></td>' +
+                        '</tr>'
+                    );
+                }
+            }
+        });
+    }
+
+    function deleteTask(taskId) {
+        $.ajax({
+            type: "DELETE",
+            url: "/todo",
+            data: JSON.stringify(
+                {
+                    id: taskId
+                }
+            ),
+            contentType: "application/json; charset=utf-8",
+            dataType: "json",
+            complete: function (xhr, textStatus) {
+                if (xhr.status === 200) {
+                    getAllTasks(currentPage);
+                    highlightSelectedPage();
+                } else {
+                    console.error("Request failed with status:", xhr.status);
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

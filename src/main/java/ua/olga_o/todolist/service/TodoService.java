@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import ua.olga_o.todolist.dto.TaskCountDto;
 import ua.olga_o.todolist.dto.TodoDto;
 import ua.olga_o.todolist.entity.TaskEntity;
 import ua.olga_o.todolist.mapper.TaskMapper;
@@ -28,6 +29,10 @@ public class TodoService {
         return pageContent.getContent().stream()
                 .map(taskMapper::convert)
                 .collect(Collectors.toList());
+    }
+
+    public TaskCountDto getTaskCount() {
+        return TaskCountDto.builder().count(taskRepository.count()).build();
     }
 
     public TodoDto create(TodoDto todoDetails) {

@@ -3,6 +3,7 @@ package ua.olga_o.todolist.controller;
 import lombok.AllArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import ua.olga_o.todolist.dto.TaskCountDto;
 import ua.olga_o.todolist.dto.TodoDto;
 import ua.olga_o.todolist.service.TodoService;
 
@@ -18,6 +19,11 @@ public class TodoController {
     @GetMapping()
     public List<TodoDto> getAll(@RequestParam(defaultValue = "1") int page) {
         return todoService.getAll(page);
+    }
+
+    @GetMapping("/count")
+    public TaskCountDto getTotalTaskCount() {
+        return todoService.getTaskCount();
     }
 
     @PostMapping
