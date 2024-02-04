@@ -10,7 +10,7 @@
     </parent>
     <groupId>ua.olga_o</groupId>
     <artifactId>ToDoList</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <name>ToDoList</name>
     <description>ToDoList</description>
     <properties>
